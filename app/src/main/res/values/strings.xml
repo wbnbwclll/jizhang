@@ -1,3 +1,38 @@
 <resources>
     <string name="app_name">语音记账</string>
+
+    <!-- 账单列表 -->
+    <string name="ledger_title">账单</string>
+    <string name="month_label">%1$d年%2$d月</string>
+    <string name="month_previous">上个月</string>
+    <string name="month_next">下个月</string>
+    <string name="totals_expense">支出 %1$s</string>
+    <string name="totals_income">收入 %1$s</string>
+    <string name="search_hint">搜索备注、商户或分类</string>
+    <string name="empty_month">本月还没有记账</string>
+    <string name="empty_search">没有匹配的账单</string>
+    <string name="add_entry">记一笔</string>
+    <string name="delete">删除</string>
+    <string name="cancel">取消</string>
+    <string name="save">保存</string>
+    <string name="back">返回</string>
+    <string name="no_note">无备注</string>
+    <string name="delete_confirm_title">删除这笔记录？</string>
+    <string name="delete_confirm_message">删除后无法恢复。</string>
+
+    <!-- 新增 / 编辑 -->
+    <string name="new_entry_title">记一笔</string>
+    <string name="edit_entry_title">编辑账单</string>
+    <string name="amount_label">金额</string>
+    <string name="amount_hint">0.00</string>
+    <string name="amount_invalid">请输入 0.01 ~ 1000000 之间的金额</string>
+    <string name="direction_expense">支出</string>
+    <string name="direction_income">收入</string>
+    <string name="category_label">分类</string>
+    <string name="occurred_at_label">时间</string>
+    <string name="note_label">备注</string>
+    <string name="note_hint">选填，如：和同事聚餐</string>
+    <string name="merchant_label">商户</string>
+    <string name="merchant_hint">选填，如：星巴克</string>
+    <string name="entry_missing">记录不存在或已删除</string>
 </resources>

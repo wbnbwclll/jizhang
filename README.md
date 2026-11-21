@@ -7,12 +7,36 @@
 - 语音识别：端侧离线小模型（计划阶段，尚未接入）
 - 自然语言解析：DeepSeek API（计划阶段，尚未接入）
 
+## 已实现功能（当前版本）
+
+- 手动记账：金额（分存储、无浮点误差）、收支切换、分类、日期时间、备注、商户
+- 账单列表：按月份切换、按月合计（支出/收入）、关键字搜索（备注/商户/分类）
+- 编辑与删除：点击条目修改，左滑或编辑页删除，均带二次确认
+- 本地持久化：Room 数据库，杀进程后数据不丢
+- 输入校验：金额为空/为 0/非数字时提示并禁用保存
+
+尚未实现（后续迭代）：语音录音与端侧 ASR、DeepSeek 自然语言解析、统计图表与预算提醒。
+
 ## 运行环境
 
 - Android Studio（自带 JDK 21+）
 - Android SDK Platform 37、Build-Tools
 - Gradle 9.6.0（由 Gradle Wrapper 自动下载）
 - 最低运行版本：Android 8.0（API 26）
+
+## 数据存储
+
+- 数据库文件：`ledger.db`，表 `transactions`，版本 v1
+- 建表结构导出在 `app/schemas/com.wbnbwclll.voiceledger.data.local.LedgerDatabase/1.json`
+- 金额字段 `amountCents` 为整数"分"；`source` / `rawInput` / `parser` 为后续语音与 AI 解析预留
+
+## 测试
+
+```bash
+gradlew.bat testDebugUnitTest
+```
+
+覆盖金额解析（含 0.1+0.2 浮点误差用例）与月份区间计算。
 
 ## 构建与安装
 
