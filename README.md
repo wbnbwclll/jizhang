@@ -4,18 +4,34 @@
 
 - 需求与验收标准：[docs/01-需求与验收标准.md](docs/01-需求与验收标准.md)
 - 形态：Android 原生（Kotlin + Jetpack Compose + Room）
-- 语音识别：端侧离线小模型（计划阶段，尚未接入）
+- 语音识别：端侧离线小模型 Vosk（已接入，模型需本地准备）
 - 自然语言解析：DeepSeek API（计划阶段，尚未接入）
 
 ## 已实现功能（当前版本）
 
 - 手动记账：金额（分存储、无浮点误差）、收支切换、分类、日期时间、备注、商户
+- 语音记账：编辑页点「语音记账」开始录音，再次点击结束识别，识别文本自动填入备注，文本中的阿拉伯数字金额自动填入金额
+- 端侧离线识别：Vosk 中文小模型（约 42 MB），不联网、音频不落盘
 - 账单列表：按月份切换、按月合计（支出/收入）、关键字搜索（备注/商户/分类）
 - 编辑与删除：点击条目修改，左滑或编辑页删除，均带二次确认
 - 本地持久化：Room 数据库，杀进程后数据不丢
 - 输入校验：金额为空/为 0/非数字时提示并禁用保存
 
-尚未实现（后续迭代）：语音录音与端侧 ASR、DeepSeek 自然语言解析、统计图表与预算提醒。
+尚未实现（后续迭代）：DeepSeek 自然语言解析、中文数字金额（"二十八块五"）、统计图表与预算提醒。
+
+## 语音模型准备（首次构建必做）
+
+模型文件体积大，不纳入版本管理。首次克隆仓库后执行：
+
+```powershell
+curl.exe -L -o "$env:TEMP\vosk-cn.zip" https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip
+Expand-Archive "$env:TEMP\vosk-cn.zip" -DestinationPath "app/src/main/assets" -Force
+Rename-Item "app/src/main/assets/vosk-model-small-cn-0.22" "vosk-model-cn"
+Set-Content "app/src/main/assets/vosk-model-cn/uuid" -Value "vosk-model-small-cn-0.22" -NoNewline
+```
+
+缺少该目录时应用仍可编译运行，只是「语音记账」会提示模型加载失败，手动记账不受影响。
+带模型的 debug APK 约 93 MB。
 
 ## 运行环境
 

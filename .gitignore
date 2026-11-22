@@ -20,6 +20,7 @@ captures/
 
 # 离线 ASR 模型文件（体积大，按 README 说明另行下载，不要提交）
 /app/src/main/assets/models/
+/app/src/main/assets/vosk-model-cn/
 models/
 
 *.log
