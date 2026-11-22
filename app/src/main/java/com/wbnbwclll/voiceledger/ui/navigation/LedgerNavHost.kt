@@ -19,6 +19,8 @@ private object Routes {
     const val LEDGER = "ledger"
     const val ARG_ENTRY_ID = "entryId"
     const val EDITOR = "editor?entryId={entryId}"
+    const val QUICK_INPUT = "quickInput"
+    const val QUICK_INPUT_INCLUDES_VOICE = "quickInputIncludesVoice"
 
     fun editor(entryId: Long): String = "editor?entryId=$entryId"
 }
@@ -37,6 +39,13 @@ fun LedgerNavHost(repository: LedgerRepository) {
                 onNextMonth = viewModel::nextMonth,
                 onKeywordChange = viewModel::onKeywordChange,
                 onAddClick = { navController.navigate(Routes.editor(0L)) },
+                onQuickEntry = { text, includesVoice ->
+                    navController.navigate(Routes.editor(0L))
+                    navController.currentBackStackEntry?.savedStateHandle?.apply {
+                        set(Routes.QUICK_INPUT, text)
+                        set(Routes.QUICK_INPUT_INCLUDES_VOICE, includesVoice)
+                    }
+                },
                 onEntryClick = { id -> navController.navigate(Routes.editor(id)) },
                 onDelete = viewModel::delete
             )
@@ -53,7 +62,12 @@ fun LedgerNavHost(repository: LedgerRepository) {
         ) { backStackEntry ->
             val entryId = backStackEntry.arguments?.getLong(Routes.ARG_ENTRY_ID) ?: 0L
             val viewModel: EditorViewModel = viewModel(
-                factory = EditorViewModel.factory(repository, entryId)
+                factory = EditorViewModel.factory(
+                    repository = repository,
+                    entryId = entryId,
+                    quickInput = backStackEntry.savedStateHandle[Routes.QUICK_INPUT],
+                    includesVoice = backStackEntry.savedStateHandle[Routes.QUICK_INPUT_INCLUDES_VOICE] ?: false
+                )
             )
             val state by viewModel.uiState.collectAsState()
             EditorScreen(
@@ -64,6 +78,7 @@ fun LedgerNavHost(repository: LedgerRepository) {
                 onCategoryChange = viewModel::onCategoryChange,
                 onMerchantChange = viewModel::onMerchantChange,
                 onNoteChange = viewModel::onNoteChange,
+                onVoiceText = viewModel::onVoiceText,
                 onOccurredAtChange = viewModel::onOccurredAtChange,
                 onSave = viewModel::save,
                 onDelete = viewModel::delete

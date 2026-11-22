@@ -1,0 +1,5 @@
+Upstream: https://huggingface.co/hfl/chinese-electra-180g-small-discriminator
+Revision: 826a243f3f387450ef8d70de9c3d0706d8d8e924
+License: Apache License 2.0; see LICENSE and upstream README.md.
+PyTorch SHA-256: 45c0a4519ee767bd58ddd3573b9ceebb81a2c0fb65919a8b7513b57ee52009b3
+TensorFlow SHA-256: 4903d4cc85d5a3c6b8de5e58b342d21ca2f34f04a3b3a221979c53deab1ebe31

@@ -1,0 +1,4 @@
+Vosk Chinese speech recognition model: vosk-model-small-cn-0.22
+Source: https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip
+License: Apache License 2.0; see LICENSE.
+Model files are redistributed unchanged. The app adds uuid for Vosk StorageService.

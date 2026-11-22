@@ -36,6 +36,7 @@ class VoiceInputController(private val context: Context) {
     private var recognizer: Recognizer? = null
     private var audioRecord: AudioRecord? = null
     private var worker: Thread? = null
+    private var released = false
 
     @Volatile
     private var recording = false
@@ -43,8 +44,8 @@ class VoiceInputController(private val context: Context) {
 
     /** 开始录音；模型未加载时先异步加载 */
     fun start(onFinal: (String) -> Unit) {
+        if (released || recording || _state.value.isLoadingModel) return
         onFinalText = onFinal
-        if (recording) return
 
         val loaded = model
         if (loaded != null) {
@@ -58,11 +59,16 @@ class VoiceInputController(private val context: Context) {
             ASSET_DIR,
             MODEL_DIR,
             { unpacked ->
+                if (released) {
+                    unpacked.close()
+                    return@unpack
+                }
                 model = unpacked
                 _state.update { it.copy(isLoadingModel = false, isModelReady = true) }
                 beginRecording(unpacked)
             },
             { error: IOException ->
+                if (released) return@unpack
                 _state.update {
                     it.copy(
                         isLoadingModel = false,
@@ -140,10 +146,14 @@ class VoiceInputController(private val context: Context) {
                 message = if (text.isBlank()) context.getString(R.string.voice_empty) else null
             )
         }
-        if (text.isNotBlank()) onFinalText?.invoke(text)
+        val callback = onFinalText
+        onFinalText = null
+        if (text.isNotBlank()) callback?.invoke(text)
     }
 
     fun release() {
+        released = true
+        onFinalText = null
         stop()
         runCatching { model?.close() }
         model = null

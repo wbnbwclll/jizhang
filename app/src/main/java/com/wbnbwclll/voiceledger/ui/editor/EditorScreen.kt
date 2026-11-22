@@ -1,9 +1,5 @@
 package com.wbnbwclll.voiceledger.ui.editor
 
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,7 +10,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,28 +23,22 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.wbnbwclll.voiceledger.R
 import com.wbnbwclll.voiceledger.model.Category
 import com.wbnbwclll.voiceledger.model.Direction
-import com.wbnbwclll.voiceledger.speech.VoiceInputController
 import com.wbnbwclll.voiceledger.ui.components.ConfirmDeleteDialog
+import com.wbnbwclll.voiceledger.ui.components.VoiceTextField
 import com.wbnbwclll.voiceledger.util.DateFormats
-import com.wbnbwclll.voiceledger.util.Money
-import com.wbnbwclll.voiceledger.util.SpeechText
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -64,45 +53,13 @@ fun EditorScreen(
     onCategoryChange: (Category) -> Unit,
     onMerchantChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
+    onVoiceText: (String) -> Unit,
     onOccurredAtChange: (Long) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-
-    val context = LocalContext.current
-    val voiceController = remember { VoiceInputController(context) }
-    val voiceState by voiceController.state.collectAsState()
-    val currentNote by rememberUpdatedState(state.note)
-    var pendingVoiceStart by remember { mutableStateOf(false) }
-    var permissionDenied by remember { mutableStateOf(false) }
-
-    val startVoice: () -> Unit = {
-        voiceController.start { text ->
-            onNoteChange(if (currentNote.isBlank()) text else "$currentNote $text")
-            SpeechText.extractAmountCents(text)?.let { onAmountChange(Money.centsToInput(it)) }
-        }
-    }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            permissionDenied = false
-            if (pendingVoiceStart) {
-                pendingVoiceStart = false
-                startVoice()
-            }
-        } else {
-            pendingVoiceStart = false
-            permissionDenied = true
-        }
-    }
-
-    DisposableEffect(Unit) {
-        onDispose { voiceController.release() }
-    }
 
     LaunchedEffect(state.finished) {
         if (state.finished) onBack()
@@ -151,6 +108,14 @@ fun EditorScreen(
                 )
             }
 
+            VoiceTextField(
+                value = state.note,
+                onValueChange = onNoteChange,
+                onVoiceText = onVoiceText,
+                label = stringResource(R.string.note_label),
+                placeholder = stringResource(R.string.note_hint)
+            )
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = state.direction == Direction.EXPENSE,
@@ -181,51 +146,6 @@ fun EditorScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = {
-                        when {
-                            voiceState.isRecording -> voiceController.stop()
-                            context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
-                                PackageManager.PERMISSION_GRANTED -> startVoice()
-                            else -> {
-                                pendingVoiceStart = true
-                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                            }
-                        }
-                    },
-                    enabled = !voiceState.isLoadingModel
-                ) {
-                    Text(
-                        when {
-                            voiceState.isLoadingModel -> stringResource(R.string.voice_loading)
-                            voiceState.isRecording -> stringResource(R.string.voice_stop)
-                            else -> stringResource(R.string.voice_start)
-                        }
-                    )
-                }
-                if (voiceState.isRecording) {
-                    Text(
-                        text = voiceState.partialText.ifBlank { stringResource(R.string.voice_hint) },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            val voiceMessage = voiceState.message
-                ?: if (permissionDenied) stringResource(R.string.voice_permission_denied) else null
-            if (!voiceState.isRecording && voiceMessage != null) {
-                Text(
-                    text = voiceMessage,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
             Text(
                 text = stringResource(R.string.category_label),
                 style = MaterialTheme.typography.labelLarge
@@ -249,15 +169,6 @@ fun EditorScreen(
                         DateFormats.dateTime(state.occurredAt)
                 )
             }
-
-            OutlinedTextField(
-                value = state.note,
-                onValueChange = onNoteChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.note_label)) },
-                placeholder = { Text(stringResource(R.string.note_hint)) },
-                singleLine = true
-            )
 
             OutlinedTextField(
                 value = state.merchant,

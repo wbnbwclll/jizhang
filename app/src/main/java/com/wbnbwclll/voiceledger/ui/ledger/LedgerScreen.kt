@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +40,7 @@ import com.wbnbwclll.voiceledger.model.Transaction
 import com.wbnbwclll.voiceledger.ui.components.ConfirmDeleteDialog
 import com.wbnbwclll.voiceledger.ui.components.EmptyState
 import com.wbnbwclll.voiceledger.ui.components.MonthSelector
+import com.wbnbwclll.voiceledger.ui.components.VoiceTextField
 import com.wbnbwclll.voiceledger.util.DateFormats
 import com.wbnbwclll.voiceledger.util.Money
 
@@ -52,10 +54,13 @@ fun LedgerScreen(
     onNextMonth: () -> Unit,
     onKeywordChange: (String) -> Unit,
     onAddClick: () -> Unit,
+    onQuickEntry: (String, Boolean) -> Unit,
     onEntryClick: (Long) -> Unit,
     onDelete: (Long) -> Unit
 ) {
     var pendingDeleteId by remember { mutableStateOf<Long?>(null) }
+    var quickInput by rememberSaveable { mutableStateOf("") }
+    var includesVoice by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -103,28 +108,47 @@ fun LedgerScreen(
             }
         }
     ) { innerPadding ->
-        if (state.entries.isEmpty() && !state.isLoading) {
-            EmptyState(
-                text = stringResource(
-                    if (state.keyword.isBlank()) R.string.empty_month else R.string.empty_search
-                ),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            VoiceTextField(
+                value = quickInput,
+                onValueChange = {
+                    quickInput = it
+                    if (it.isBlank()) includesVoice = false
+                },
+                onVoiceText = { text ->
+                    quickInput = if (quickInput.isBlank()) text else "${quickInput.trimEnd()} $text"
+                    includesVoice = true
+                },
+                label = stringResource(R.string.quick_entry_label),
+                placeholder = stringResource(R.string.quick_entry_hint),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                onContinue = {
+                    onQuickEntry(quickInput.trim(), includesVoice)
+                    quickInput = ""
+                    includesVoice = false
+                }
             )
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                items(state.entries, key = { it.id }) { entry ->
-                    TransactionRow(
-                        entry = entry,
-                        onClick = { onEntryClick(entry.id) },
-                        onRequestDelete = { pendingDeleteId = entry.id }
-                    )
-                    HorizontalDivider()
+            if (state.entries.isEmpty() && !state.isLoading) {
+                EmptyState(
+                    text = stringResource(
+                        if (state.keyword.isBlank()) R.string.empty_month else R.string.empty_search
+                    ),
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(state.entries, key = { it.id }) { entry ->
+                        TransactionRow(
+                            entry = entry,
+                            onClick = { onEntryClick(entry.id) },
+                            onRequestDelete = { pendingDeleteId = entry.id }
+                        )
+                        HorizontalDivider()
+                    }
                 }
             }
         }

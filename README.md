@@ -4,13 +4,14 @@
 
 - 需求与验收标准：[docs/01-需求与验收标准.md](docs/01-需求与验收标准.md)
 - 形态：Android 原生（Kotlin + Jetpack Compose + Room）
-- 语音识别：端侧离线小模型 Vosk（已接入，模型需本地准备）
+- 语音识别：端侧离线小模型 Vosk，模型随 APK 打包
 - 自然语言解析：DeepSeek API（计划阶段，尚未接入）
 
 ## 已实现功能（当前版本）
 
 - 手动记账：金额（分存储、无浮点误差）、收支切换、分类、日期时间、备注、商户
-- 语音记账：编辑页点「语音记账」开始录音，再次点击结束识别，识别文本自动填入备注，文本中的阿拉伯数字金额自动填入金额
+- 一句话记账：在首页输入文字，或点输入框右下角的麦克风录音。再次点击结束录音，离线转写回填到输入框，可继续修改
+- 草稿确认：点击「继续」进入编辑页，输入内容带入备注，尝试用本地规则填写金额。确认金额、分类等字段后手动保存
 - 端侧离线识别：Vosk 中文小模型（约 42 MB），不联网、音频不落盘
 - 账单列表：按月份切换、按月合计（支出/收入）、关键字搜索（备注/商户/分类）
 - 编辑与删除：点击条目修改，左滑或编辑页删除，均带二次确认
@@ -19,19 +20,13 @@
 
 尚未实现（后续迭代）：DeepSeek 自然语言解析、中文数字金额（"二十八块五"）、统计图表与预算提醒。
 
-## 语音模型准备（首次构建必做）
+## 安装包与模型
 
-模型文件体积大，不纳入版本管理。首次克隆仓库后执行：
+- [Android 调试版 APK](dist/VoiceLedger-input-debug.apk)，约 93 MiB，内置离线中文语音模型。
+- [Vosk 中文语音模型](app/src/main/assets/vosk-model-cn)，克隆后可直接参与 Android 构建。权重来源为 [Vosk 模型目录](https://alphacephei.com/vosk/models)。
+- [ELECTRA 中文基模](models/electra/chinese-electra-180g-small-discriminator)，含 PyTorch 和 TensorFlow 权重、配置及分词文件。基模用作后续语义微调，训练方案见 [ELECTRA 训练文档](docs/02-electra-training.md)，测试用例见 [测试集](data/electra)。
 
-```powershell
-curl.exe -L -o "$env:TEMP\vosk-cn.zip" https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip
-Expand-Archive "$env:TEMP\vosk-cn.zip" -DestinationPath "app/src/main/assets" -Force
-Rename-Item "app/src/main/assets/vosk-model-small-cn-0.22" "vosk-model-cn"
-Set-Content "app/src/main/assets/vosk-model-cn/uuid" -Value "vosk-model-small-cn-0.22" -NoNewline
-```
-
-缺少该目录时应用仍可编译运行，只是「语音记账」会提示模型加载失败，手动记账不受影响。
-带模型的 debug APK 约 93 MB。
+APK 和 ELECTRA 权重使用 Git LFS。若克隆后看到的是小型指针文件，安装 Git LFS 并在仓库内执行 `git lfs pull`。
 
 ## 运行环境
 
@@ -84,7 +79,6 @@ systemProp.https.proxyPort=7897
 
 - `local.properties` 由 Android Studio 自动生成，包含本机 SDK 路径，**不纳入版本管理**。
 - DeepSeek API Key 只写入 `local.properties`，通过 `BuildConfig` 读取；仓库中仅保留 `local.properties.sample` 占位示例。
-- 离线 ASR 模型文件体积较大，不提交到仓库，按后续说明单独下载。
 
 ## 目录结构
 

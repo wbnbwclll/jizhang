@@ -8,8 +8,11 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.wbnbwclll.voiceledger.data.LedgerRepository
 import com.wbnbwclll.voiceledger.model.Category
 import com.wbnbwclll.voiceledger.model.Direction
+import com.wbnbwclll.voiceledger.model.EntrySource
+import com.wbnbwclll.voiceledger.model.ParseSource
 import com.wbnbwclll.voiceledger.model.Transaction
 import com.wbnbwclll.voiceledger.util.Money
+import com.wbnbwclll.voiceledger.util.SpeechText
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,9 +24,18 @@ import kotlinx.coroutines.launch
  */
 class EditorViewModel(
     private val repository: LedgerRepository,
-    private val entryId: Long
+    private val entryId: Long,
+    quickInput: String? = null,
+    includesVoice: Boolean = false
 ) : ViewModel() {
 
+    private val initialInput = quickInput?.trim()?.takeIf { entryId <= 0L && it.isNotEmpty() }
+    private val inputSource = when {
+        initialInput == null -> EntrySource.MANUAL
+        includesVoice -> EntrySource.VOICE
+        else -> EntrySource.TEXT
+    }
+    private val prefilledAmount = initialInput?.let(SpeechText::extractAmountCents)
     private val _uiState = MutableStateFlow(EditorUiState(entryId = entryId.takeIf { it > 0L }))
     val uiState: StateFlow<EditorUiState> = _uiState.asStateFlow()
 
@@ -33,7 +45,13 @@ class EditorViewModel(
         if (entryId > 0L) {
             load()
         } else {
-            _uiState.update { it.copy(isLoading = false) }
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    note = initialInput.orEmpty(),
+                    amountInput = prefilledAmount?.let(Money::centsToInput).orEmpty()
+                )
+            }
         }
     }
 
@@ -82,6 +100,16 @@ class EditorViewModel(
         _uiState.update { it.copy(note = value) }
     }
 
+    fun onVoiceText(text: String) {
+        val amount = SpeechText.extractAmountCents(text)?.let(Money::centsToInput)
+        _uiState.update { state ->
+            state.copy(
+                note = if (state.note.isBlank()) text else "${state.note.trimEnd()} $text",
+                amountInput = amount ?: state.amountInput
+            )
+        }
+    }
+
     fun onOccurredAtChange(millis: Long) {
         _uiState.update { it.copy(occurredAt = millis) }
     }
@@ -109,7 +137,10 @@ class EditorViewModel(
                     category = category,
                     merchant = state.merchant,
                     note = state.note,
-                    occurredAt = state.occurredAt
+                    occurredAt = state.occurredAt,
+                    source = inputSource,
+                    rawInput = initialInput,
+                    parser = if (prefilledAmount != null) ParseSource.LOCAL_RULE else ParseSource.MANUAL
                 )
             }
             repository.save(record)
@@ -126,9 +157,14 @@ class EditorViewModel(
     }
 
     companion object {
-        fun factory(repository: LedgerRepository, entryId: Long): ViewModelProvider.Factory =
+        fun factory(
+            repository: LedgerRepository,
+            entryId: Long,
+            quickInput: String? = null,
+            includesVoice: Boolean = false
+        ): ViewModelProvider.Factory =
             viewModelFactory {
-                initializer { EditorViewModel(repository, entryId) }
+                initializer { EditorViewModel(repository, entryId, quickInput, includesVoice) }
             }
     }
 }

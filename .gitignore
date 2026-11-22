@@ -17,10 +17,11 @@ captures/
 *.keystore
 *.apk
 *.aab
+!/dist/VoiceLedger-input-debug.apk
 
-# 离线 ASR 模型文件（体积大，按 README 说明另行下载，不要提交）
+# 保留发布的 ELECTRA 基模和随应用打包的 Vosk 模型
 /app/src/main/assets/models/
-/app/src/main/assets/vosk-model-cn/
-models/
+/models/*
+!/models/electra/
 
 *.log
